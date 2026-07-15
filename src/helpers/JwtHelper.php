@@ -1,0 +1,31 @@
+<?php
+
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+
+class JwtHelper
+{
+    public static function generateToken(array $payload): string
+    {
+        $secret = Config::getString('JWT_SECRET');
+        $expiry = Config::getInt('JWT_EXPIRY', 3600);
+
+        $issuedAt = time();
+        $payload = array_merge($payload, [
+            'iat' => $issuedAt,
+            'exp' => $issuedAt + $expiry,
+        ]);
+
+        return JWT::encode($payload, $secret, 'HS256');
+    }
+
+    public static function validateToken(string $token): ?object
+    {
+        $secret = Config::getString('JWT_SECRET');
+        try {
+            return JWT::decode($token, new Key($secret, 'HS256'));
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+}
