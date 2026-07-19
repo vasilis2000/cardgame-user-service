@@ -1,4 +1,12 @@
 <?php
+
+declare(strict_types=1);
+
+namespace App\Helpers;
+
+use PDO;
+use PDOException;
+
 class Database
 {
     private static ?PDO $instance = null;

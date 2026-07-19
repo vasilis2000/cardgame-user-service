@@ -1,5 +1,10 @@
 <?php
-require_once __DIR__ . '/../services/AuthMiddleware.php';
+
+declare(strict_types=1);
+
+namespace App\Helpers;
+
+use App\Middleware\AuthMiddleware;
 
 class AuthHelper
 {

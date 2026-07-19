@@ -8,7 +8,7 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - ./src:/var/www/html
+      - .:/var/www/html               # mount whole project
       - vendor_volume:/var/www/html/vendor
     environment:
       - DB_HOST=${DB_HOST}
@@ -44,9 +44,9 @@ services:
     ports:
       - "8081:80"
     environment:
-      PMA_HOST: db                        
-      PMA_USER: ${DB_USER}               
-      PMA_PASSWORD: ${DB_PASSWORD}        
+      PMA_HOST: db
+      PMA_USER: ${DB_USER}
+      PMA_PASSWORD: ${DB_PASSWORD}
     depends_on:
       - db
     restart: unless-stopped
