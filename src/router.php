@@ -17,7 +17,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-Config::load();
 
 try {
     $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
@@ -27,6 +26,8 @@ try {
     $resource = $segments[0] ?? '';
     $action   = $segments[1] ?? null;
     $method   = $_SERVER['REQUEST_METHOD'];
+        
+    Config::load();
 
     $userRepo = new UserRepository();
     $jwtHelper = new JwtHelper();
@@ -70,5 +71,5 @@ try {
     }
 } catch (\Throwable $e) {
     error_log('Unhandled router error: ' . $e->getMessage());
-    ResponseHelper::sendResponse(500, ['error' => 'Internal server error.']);
+    ResponseHelper::sendResponse(500, ['message' => 'Internal server error.']);
 }
