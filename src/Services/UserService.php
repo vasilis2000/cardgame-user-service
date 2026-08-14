@@ -25,11 +25,10 @@ class UserService
     public function register(string $username, string $password): void
     {
         $this->validateCredentials($username, $password);
-
         try {
             $this->repo->create($username, $password);
         } catch (PDOException $e) {
-            if ($e->getCode() === '23000') {
+            if ($e->errorInfo[1] === 1062 || str_contains($e->getMessage(), 'Duplicate entry')) {
                 throw new DuplicateUserException('Username already taken.');
             }
             throw $e;

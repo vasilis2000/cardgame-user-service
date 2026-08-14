@@ -10,6 +10,7 @@ use App\Utilities\AuthHelper;
 use App\Exceptions\ValidationException;
 use App\Exceptions\DuplicateUserException;
 use App\Exceptions\AuthenticationException;
+use App\Exceptions\UnauthorizedException;
 
 class UserController
 {
@@ -64,6 +65,8 @@ class UserController
             } else {
                 ResponseHelper::sendResponse(404, ['message' => 'User not found.']);
             }
+        } catch (UnauthorizedException $e) {
+            ResponseHelper::sendResponse(401, ['message' => $e->getMessage()]);
         } catch (\Exception $e) {
             error_log('Profile error: ' . $e->getMessage());
             ResponseHelper::sendResponse(500, ['message' => 'Internal server error.']);

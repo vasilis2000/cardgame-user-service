@@ -14,11 +14,12 @@ class Config
         'DB_NAME',
         'DB_USER',
         'DB_PASSWORD',
-        'JWT_SECRET',
+        'JWT_SECRET'
     ];
 
     private const DEFAULTS = [
         'JWT_EXPIRY' => 3600,
+        'ALLOWED_ORIGINS' => 'http://localhost',
     ];
 
     public static function load(): void
@@ -101,7 +102,11 @@ class Config
 
     public static function getInt(string $key, int $default = 0): int
     {
-        return (int) self::get($key, $default);
+        $value = (int) self::get($key, $default);
+        if ($key === 'JWT_EXPIRY' && $value <= 0) {
+            throw new \InvalidArgumentException('JWT_EXPIRY must be a positive integer.');
+        }
+        return $value;
     }
 
     public static function getBool(string $key, bool $default = false): bool
@@ -116,5 +121,22 @@ class Config
     public static function getString(string $key, string $default = ''): string
     {
         return (string) self::get($key, $default);
+    }
+
+
+    public static function getArray(string $key, string $separator = ',', array $default = []): array
+    {
+        $value = self::get($key, null);
+        if ($value === null || $value === '') {
+            return $default;
+        }
+        if (is_array($value)) {
+            return $value;
+        }
+        if (!is_string($value)) {
+            return $default;
+        }
+        $parts = array_map('trim', explode($separator, $value));
+        return array_values(array_filter($parts, static fn($part) => $part !== ''));
     }
 }
