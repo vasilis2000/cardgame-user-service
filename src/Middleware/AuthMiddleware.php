@@ -4,23 +4,23 @@ declare(strict_types=1);
 
 namespace App\Middleware;
 
-use App\Helpers\JwtHelper;
-use App\Helpers\ResponseHelper;
+use App\Utilities\JwtHelper;
+use App\Exceptions\UnauthorizedException;
 
 class AuthMiddleware
 {
-    public static function authenticate(): ?object
+    public static function authenticate(): object
     {
         $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
         if (!preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-            ResponseHelper::sendResponse(401, ['message' => 'No token provided']);
+            throw new UnauthorizedException('No token provided');
         }
 
         $token = $matches[1];
         $decoded = JwtHelper::validateToken($token);
 
         if (!$decoded) {
-            ResponseHelper::sendResponse(401, ['message' => 'Invalid or expired token']);
+            throw new UnauthorizedException('Invalid or expired token');
         }
 
         return $decoded;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Helpers;
+namespace App\Utilities;
 
 class UserValidator
 {
@@ -10,8 +10,8 @@ class UserValidator
     {
         $errors = [];
 
-        $username = trim($data['username'] ?? '');
-        $password = trim($data['password'] ?? '');
+        $username = is_string($data['username'] ?? '') ? trim($data['username']) : '';
+        $password = is_string($data['password'] ?? '') ? trim($data['password']) : '';
 
         if ($username === '') {
             $errors[] = 'Username is required.';

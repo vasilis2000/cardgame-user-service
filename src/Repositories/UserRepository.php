@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use PDO;
-use App\Helpers\Database;
+use App\Utilities\Database;
 
 class UserRepository
 {

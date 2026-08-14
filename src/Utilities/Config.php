@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Helpers;
+namespace App\Utilities;
 
 class Config
 {
@@ -83,6 +83,10 @@ class Config
             return self::$values[$key];
         }
 
+        if (in_array($key, self::REQUIRED_KEYS, true)) {
+            throw new \RuntimeException("Required configuration key '{$key}' is not set.");
+        }
+
         $value = getenv($key);
         if ($value !== false) {
             return $value;
@@ -90,10 +94,6 @@ class Config
 
         if (func_num_args() >= 2) {
             return $default;
-        }
-
-        if (in_array($key, self::REQUIRED_KEYS)) {
-            throw new \RuntimeException("Required configuration key '{$key}' is not set.");
         }
 
         return null;

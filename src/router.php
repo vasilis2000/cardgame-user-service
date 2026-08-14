@@ -1,18 +1,40 @@
 <?php
+declare(strict_types=1);
 require_once __DIR__ . '/../vendor/autoload.php';
+
 use App\Controllers\UserController;
 use App\Services\UserService;
 use App\Repositories\UserRepository;
-use App\Helpers\JwtHelper;
-use App\Helpers\Config;
-use App\Helpers\ResponseHelper;
+use App\Utilities\Config;
+use App\Utilities\ResponseHelper;
 
-header('Content-Type: application/json');
+$allowedOrigins = ['https://your-frontend-domain.com', 'http://localhost:3000']; 
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+if (in_array($origin, $allowedOrigins, true)) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+    header('Access-Control-Allow-Credentials: true');
+} else {
+    header('Access-Control-Allow-Origin: *');
+}
+
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
-header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    $requestMethod = $_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD'] ?? null;
+    $requestHeaders = $_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS'] ?? null;
+
+    if ($requestMethod) {
+        header('Access-Control-Allow-Methods: ' . $requestMethod);
+    }
+    if ($requestHeaders) {
+        header('Access-Control-Allow-Headers: ' . $requestHeaders);
+    }
+
+    header('Access-Control-Max-Age: 86400');
+
     http_response_code(204);
     exit;
 }
@@ -26,33 +48,36 @@ try {
     $resource = $segments[0] ?? '';
     $action   = $segments[1] ?? null;
     $method   = $_SERVER['REQUEST_METHOD'];
-        
+
     Config::load();
 
     $userRepo = new UserRepository();
-    $jwtHelper = new JwtHelper();
-    $userService = new UserService($userRepo, $jwtHelper);
+    $userService = new UserService($userRepo);
     $userController = new UserController($userService);
 
     switch ($resource) {
         case 'user':
             switch ($action) {
                 case 'register':
-                    if ($method === 'POST') {
-                        $data = json_decode(file_get_contents('php://input'), true) ?? [];
-                        $userController->register($data);
-                    } else {
-                        ResponseHelper::sendResponse(405, ['message' => 'Method Not Allowed.']);
-                    }
-                    break;
                 case 'login':
                     if ($method === 'POST') {
-                        $data = json_decode(file_get_contents('php://input'), true) ?? [];
-                        $userController->login($data);
+                        $rawInput = file_get_contents('php://input');
+                        $data = json_decode($rawInput, true);
+
+                        if ($rawInput === '' || ($data === null && json_last_error() !== JSON_ERROR_NONE)||!is_array($data)) {
+                            ResponseHelper::sendResponse(400, ['message' => 'Invalid JSON or empty body']);
+                        }
+
+                        if ($action === 'register') {
+                            $userController->register($data);
+                        } else {
+                            $userController->login($data);
+                        }
                     } else {
                         ResponseHelper::sendResponse(405, ['message' => 'Method Not Allowed.']);
                     }
                     break;
+
                 case 'me':
                     if ($method === 'GET') {
                         $userController->me();
@@ -60,11 +85,13 @@ try {
                         ResponseHelper::sendResponse(405, ['message' => 'Method Not Allowed.']);
                     }
                     break;
+
                 default:
                     ResponseHelper::sendResponse(404, ['message' => 'Not Found']);
                     break;
             }
             break;
+
         default:
             ResponseHelper::sendResponse(404, ['message' => 'Not Found']);
             break;

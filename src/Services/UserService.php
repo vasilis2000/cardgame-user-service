@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Repositories\UserRepository;
-use App\Helpers\UserValidator;
-use App\Helpers\JwtHelper;
-use App\Helpers\Config;
+use App\Utilities\UserValidator;
+use App\Utilities\JwtHelper;
+use App\Utilities\Config;
 use App\Exceptions\ValidationException;
 use App\Exceptions\DuplicateUserException;
 use App\Exceptions\AuthenticationException;
@@ -16,12 +16,10 @@ use PDOException;
 class UserService
 {
     private UserRepository $repo;
-    private JwtHelper $jwtHelper;
 
-    public function __construct(UserRepository $repo, JwtHelper $jwtHelper)
+    public function __construct(UserRepository $repo)
     {
         $this->repo = $repo;
-        $this->jwtHelper = $jwtHelper;
     }
 
     public function register(string $username, string $password): void
@@ -47,7 +45,7 @@ class UserService
             throw new AuthenticationException('Invalid username or password.');
         }
 
-        $token = $this->jwtHelper->generateToken([
+        $token =  JwtHelper::generateToken([
             'user_id'  => $user['id'],
             'username' => $user['username'],
         ]);
