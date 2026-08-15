@@ -141,24 +141,6 @@ Exceptions thrown from the service layer are mapped centrally by the router to H
 
 Unhandled errors are logged server-side via `error_log` and never expose internal details to the client.
 
-## Project Structure
-
-```
-├── index.php                  # Entry point: loads config, runs CORS + router
-├── router.php                 # Route dispatch and exception-to-status mapping
-├── Request.php / Response.php # HTTP abstraction (App\Http)
-├── UserController.php         # Handles register/login/me requests
-├── UserService.php            # Business logic, validation, JWT issuance
-├── UserRepository.php         # Data access (PDO/MySQL)
-├── UserValidator.php          # Username/password validation rules
-├── JwtHelper.php               # JWT encode/decode
-├── AuthHelper.php / AuthMiddleware.php  # Bearer token authentication
-├── CorsMiddleware.php         # CORS origin allow-list handling
-├── Config.php                 # Environment variable loading/access
-├── Database.php               # PDO connection singleton
-└── *Exception.php             # Typed exceptions (App\Exceptions)
-```
-
 ## Security Notes
 
 - Passwords are hashed with bcrypt (`password_hash` / `PASSWORD_BCRYPT`).
