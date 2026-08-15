@@ -2,115 +2,95 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../vendor/autoload.php';
+namespace App;
 
 use App\Controllers\UserController;
 use App\Services\UserService;
 use App\Repositories\UserRepository;
-use App\Utilities\Config;
-use App\Utilities\ResponseHelper;
+use App\Http\Request;
+use App\Http\Response;
+use App\Exceptions\ValidationException;
+use App\Exceptions\DuplicateUserException;
+use App\Exceptions\AuthenticationException;
+use App\Exceptions\UnauthorizedException;
 
-try {
+class Router
+{
+    private Request $request;
 
-    Config::load();
-
-
-    header('Content-Type: application/json');
-
-    $allowedOrigins = Config::getArray('ALLOWED_ORIGINS', ',', ['http://localhost']);
-    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-
-    if ($origin !== '' && !in_array($origin, $allowedOrigins, true)) {
-        http_response_code(403);
-        echo json_encode(['message' => 'Origin not allowed.']);
-        exit;
+    public function __construct(Request $request)
+    {
+        $this->request = $request;
     }
 
-    if ($origin !== '') {
-        header('Access-Control-Allow-Origin: ' . $origin);
-        header('Access-Control-Allow-Credentials: true');
-    } else {
-        header('Access-Control-Allow-Origin: *');
-    }
+    public function dispatch(): void
+    {
+        $exceptionMap = [
+            ValidationException::class     => 422,
+            DuplicateUserException::class  => 409,
+            AuthenticationException::class => 401,
+            UnauthorizedException::class   => 401,
+        ];
 
-    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+        try {
+            $segments = $this->request->getSegments();
+            $resource = $segments[0] ?? '';
+            $action   = $segments[1] ?? null;
+            $method   = $this->request->getMethod();
 
-    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-        $requestMethod = $_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD'] ?? null;
-        $requestHeaders = $_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS'] ?? null;
-
-        if ($requestMethod) {
-            header('Access-Control-Allow-Methods: ' . $requestMethod);
-        }
-        if ($requestHeaders) {
-            header('Access-Control-Allow-Headers: ' . $requestHeaders);
-        }
-
-        header('Access-Control-Max-Age: 86400');
-        http_response_code(204);
-        exit;
-    }
-
-    $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-    $requestUri = trim($requestUri, '/');
-    $segments = $requestUri ? explode('/', $requestUri) : [];
-
-    $resource = $segments[0] ?? '';
-    $action   = $segments[1] ?? null;
-    $method   = $_SERVER['REQUEST_METHOD'];
-
-
-    switch ($resource) {
-        case 'user':
-            $userRepo = new UserRepository();
-            $userService = new UserService($userRepo);
-            $userController = new UserController($userService);
-            switch ($action) {
-                case 'register':
-                case 'login':
-                    if ($method === 'POST') {
-                        $rawInput = file_get_contents('php://input');
-                        if ($rawInput === '') {
-                            ResponseHelper::sendResponse(400, ['message' => 'Empty request body']);
-                        }
-                        $data = json_decode($rawInput, true);
-                        if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
-                            ResponseHelper::sendResponse(400, ['message' => 'Invalid JSON format']);
-                        }
-                        if (!is_array($data)) {
-                            ResponseHelper::sendResponse(400, ['message' => 'Request body must be a JSON object']);
-                        }
-
-                        if ($action === 'register') {
-                            $userController->register($data);
-                        } else {
-                            $userController->login($data);
-                        }
-                    } else {
-                        ResponseHelper::sendResponse(405, ['message' => 'Method Not Allowed.']);
-                    }
-                    break;
-
-                case 'me':
-                    if ($method === 'GET') {
-                        $userController->me();
-                    } else {
-                        ResponseHelper::sendResponse(405, ['message' => 'Method Not Allowed.']);
-                    }
+            switch ($resource) {
+                case 'user':
+                    $this->handleUserRoutes($action, $method);
                     break;
 
                 default:
-                    ResponseHelper::sendResponse(404, ['message' => 'Not Found']);
-                    break;
+                    Response::error(404, 'Not Found');
             }
-            break;
-
-        default:
-            ResponseHelper::sendResponse(404, ['message' => 'Not Found']);
-            break;
+        } catch (\Throwable $e) {
+            $this->handleException($e, $exceptionMap);
+        }
     }
-} catch (\Throwable $e) {
-    error_log('Unhandled router error: ' . $e->getMessage());
-    ResponseHelper::sendResponse(500, ['message' => 'Internal server error.']);
+
+    private function handleUserRoutes(?string $action, string $method): void
+    {
+        $userRepo = new UserRepository();
+        $userService = new UserService($userRepo);
+        $userController = new UserController($userService);
+
+        switch ($action) {
+            case 'register':
+            case 'login':
+                if ($method !== 'POST') {
+                    Response::error(405, 'Method Not Allowed.');
+                    return;
+                }
+                $username = $this->request->getJsonString('username') ?: '';
+                $password = $this->request->getJsonString('password') ?: '';
+                if ($action === 'register') {
+                    $userController->register($username, $password);
+                } else {
+                    $userController->login($username, $password);
+                }
+                break;
+
+            case 'me':
+                if ($method !== 'GET') {
+                    Response::error(405, 'Method Not Allowed.');
+                    return;
+                }
+                $userController->me();
+                break;
+
+            default:
+                Response::error(404, 'Not Found');
+        }
+    }
+
+    private function handleException(\Throwable $e, array $exceptionMap): void
+    {
+        $status = $exceptionMap[get_class($e)] ?? 500;
+        $message = ($status === 500) ? 'Internal server error.' : $e->getMessage();
+        error_log('Request error: ' . (string) $e);
+        Response::error($status, $message);
+    }
 }

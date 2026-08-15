@@ -11,7 +11,6 @@ class UserRepository
 {
     private PDO $pdo;
     private const DUMMY_HASH = '$2y$10$C6UzMDM.H6dfI/f/IKcEeO9nDp5MYqK7Wl2AZTUEHW3G.uQ4o.j6O';
-
     public function __construct()
     {
         $this->pdo = Database::getConnection();
@@ -25,13 +24,18 @@ class UserRepository
         return (int) $this->pdo->lastInsertId();
     }
 
-    public function findByUsernameAndPassword(string $username, string $password): array|false
+    public function findByUsername(string $username): ?array
     {
         $stmt = $this->pdo->prepare('SELECT id, username, password, isadmin FROM users WHERE username = ?');
         $stmt->execute([$username]);
         $user = $stmt->fetch();
+        return $user ?: null;
+    }
 
-        if ($user === false) {
+    public function findByUsernameAndPassword(string $username, string $password): array|false
+    {
+        $user = $this->findByUsername($username);
+        if ($user === null) {
             $hashToCheck = self::DUMMY_HASH;
         } else {
             $hashToCheck = $user['password'];

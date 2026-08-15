@@ -11,7 +11,6 @@ use App\Utilities\Config;
 use App\Exceptions\ValidationException;
 use App\Exceptions\DuplicateUserException;
 use App\Exceptions\AuthenticationException;
-use PDOException;
 
 class UserService
 {
@@ -25,14 +24,12 @@ class UserService
     public function register(string $username, string $password): void
     {
         $this->validateCredentials($username, $password);
-        try {
-            $this->repo->create($username, $password);
-        } catch (PDOException $e) {
-            if ($e->errorInfo[1] === 1062 || str_contains($e->getMessage(), 'Duplicate entry')) {
-                throw new DuplicateUserException('Username already taken.');
-            }
-            throw $e;
+
+        if ($this->repo->findByUsername($username) !== null) {
+            throw new DuplicateUserException('Username already taken.');
         }
+
+        $this->repo->create($username, $password);
     }
 
     public function login(string $username, string $password): array
@@ -44,7 +41,7 @@ class UserService
             throw new AuthenticationException('Invalid username or password.');
         }
 
-        $token =  JwtHelper::generateToken([
+        $token = JwtHelper::generateToken([
             'user_id'  => $user['id'],
             'username' => $user['username'],
         ]);
