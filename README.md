@@ -22,22 +22,31 @@ A PHP microservice for user registration, login, and profile retrieval, using JW
 
 ## Installation
 
+### With Docker (recommended)
+
+1. Copy/adjust the `.env` file in the project root (see [Configuration](#configuration)).
+2. Build and start the containers:
+   ```bash
+   docker-compose up -d --build
+   ```
+3. Import the schema:
+   ```bash
+   docker exec -i <db-container-name> mysql -u <user> -p <database> < user.sql
+   ```
+4. The API is served from `public/`, with `public/index.php` as the front controller and `public/.htaccess` handling URL rewriting to it.
+
+### Without Docker
+
 1. Install dependencies:
    ```bash
-   composer require firebase/php-jwt vlucas/phpdotenv
+   composer install
    ```
 2. Create a `.env` file in the project root (see [Configuration](#configuration)).
-3. Create the `users` table in your MySQL database:
-   ```sql
-   CREATE TABLE users (
-       id INT AUTO_INCREMENT PRIMARY KEY,
-       username VARCHAR(32) NOT NULL UNIQUE,
-       password VARCHAR(255) NOT NULL,
-       isadmin TINYINT(1) NOT NULL DEFAULT 0,
-       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-   );
+3. Create the schema in your MySQL database by importing `user.sql`:
+   ```bash
+   mysql -u <user> -p <database> < user.sql
    ```
-4. Point your web server's document root at the directory containing `index.php`, ensuring all requests are routed through it (e.g. via an Apache `.htaccess` rewrite or Nginx `try_files`).
+4. Point your web server's document root at `public/`, so `public/index.php` handles all requests (see `public/.htaccess` for the rewrite rule if using Apache; configure an equivalent `try_files` directive for Nginx).
 
 ## Configuration
 
